@@ -12,26 +12,25 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
+	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
 )
 
 type DeploymentRequest struct {
-	AppName        string                `json:"appName"`
-	Replicas       int32                 `json:"replicas"`
-	ImageAddress   string                `json:"imageAddress"`
-	ImageTag       string                `json:"imageTag"`
-	DomainAddress  string                `json:"domainAddress"`
-	ServicePort    int32                 `json:"servicePort"`
-	Resources      ResourceRequest       `json:"resources"`
-	Envs           []KeyValuePair        `json:"envs"`
-	Secrets        []KeyValuePair        `json:"secrets"`
-	ExternalAccess ExternalAccessRequest `json:"externalAccess"`
+	AppName        string          `json:"appName"`
+	Replicas       int32           `json:"replicas"`
+	ImageAddress   string          `json:"imageAddress"`
+	ImageTag       string          `json:"imageTag"`
+	DomainAddress  string          `json:"domainAddress"`
+	ServicePort    int32           `json:"servicePort"`
+	Resources      ResourceRequest `json:"resources"`
+	Envs           []KeyValuePair  `json:"envs"`
+	Secrets        []KeyValuePair  `json:"secrets"`
+	ExternalAccess bool            `json:"ExternalAccess"`
 }
 
 type ResourceRequest struct {
@@ -43,12 +42,6 @@ type ResourceRequest struct {
 type KeyValuePair struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
-}
-
-type ExternalAccessRequest struct {
-	Enabled bool   `json:"enabled"`
-	Host    string `json:"host"`
-	Path    string `json:"path"`
 }
 
 type DeploymentInfo struct {
@@ -199,6 +192,76 @@ func getDeploymentInfo(clientset *kubernetes.Clientset, appName string) (*Deploy
 }
 
 func createDeployment(clientset *kubernetes.Clientset, req *DeploymentRequest) error {
+
+	fmt.Println(req)
+
+	// Create service object
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: req.AppName + "-service",
+		},
+		Spec: corev1.ServiceSpec{
+			Selector: map[string]string{
+				"app": req.AppName,
+			},
+			Ports: []corev1.ServicePort{
+				{
+					Port: req.ServicePort,
+				},
+			},
+		},
+	}
+	servicesClient := clientset.CoreV1().Services(corev1.NamespaceDefault)
+	fmt.Println("Creating service...")
+	_, err := servicesClient.Create(context.TODO(), service, metav1.CreateOptions{})
+	if err != nil {
+		return err
+	}
+
+	// ExternalAccess True, create ingress object
+	if req.ExternalAccess {
+		ingress := &networkingv1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: req.AppName + "-ingress",
+			},
+			Spec: networkingv1.IngressSpec{
+				Rules: []networkingv1.IngressRule{
+					{
+						Host: req.DomainAddress,
+						IngressRuleValue: networkingv1.IngressRuleValue{
+							HTTP: &networkingv1.HTTPIngressRuleValue{
+								Paths: []networkingv1.HTTPIngressPath{
+									{
+										PathType: func() *networkingv1.PathType {
+											pt := networkingv1.PathTypePrefix
+											return &pt
+										}(),
+										Path: "/",
+										Backend: networkingv1.IngressBackend{
+											Service: &networkingv1.IngressServiceBackend{
+												Name: req.AppName + "-service",
+												Port: networkingv1.ServiceBackendPort{
+													Number: req.ServicePort,
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		ingressesClient := clientset.NetworkingV1().Ingresses(corev1.NamespaceDefault)
+		fmt.Println("Creating ingress...")
+		_, err := ingressesClient.Create(context.TODO(), ingress, metav1.CreateOptions{})
+		if err != nil {
+			return fmt.Errorf("error creating ingress: %v", err)
+		}
+	}
+
 	// create secrets if requested
 	if len(req.Secrets) > 0 {
 		secretName := fmt.Sprintf("%v-secret", req.AppName)
@@ -292,50 +355,10 @@ func createDeployment(clientset *kubernetes.Clientset, req *DeploymentRequest) e
 	}
 
 	deploymentsClient := clientset.AppsV1().Deployments(corev1.NamespaceDefault)
-
 	fmt.Println("Creating deployment...")
-	fmt.Println(req)
-	_, err := deploymentsClient.Create(context.TODO(), deployment, metav1.CreateOptions{})
+	_, err = deploymentsClient.Create(context.TODO(), deployment, metav1.CreateOptions{})
 	if err != nil {
 		return err
-	}
-
-	if req.ExternalAccess.Enabled {
-		ingress := &extensionsv1beta1.Ingress{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: req.AppName + "-ingress",
-				Annotations: map[string]string{
-					"nginx.ingress.kubernetes.io/rewrite-target": "/",
-				},
-			},
-			Spec: extensionsv1beta1.IngressSpec{
-				Rules: []extensionsv1beta1.IngressRule{
-					{
-						Host: req.ExternalAccess.Host,
-						IngressRuleValue: extensionsv1beta1.IngressRuleValue{
-							HTTP: &extensionsv1beta1.HTTPIngressRuleValue{
-								Paths: []extensionsv1beta1.HTTPIngressPath{
-									{
-										Path: req.ExternalAccess.Path,
-										Backend: extensionsv1beta1.IngressBackend{
-											ServiceName: req.AppName,
-											ServicePort: intstr.FromInt(int(req.ServicePort)),
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		}
-
-		ingressesClient := clientset.ExtensionsV1beta1().Ingresses(corev1.NamespaceDefault)
-		fmt.Println("Creating ingress...")
-		_, err := ingressesClient.Create(context.TODO(), ingress, metav1.CreateOptions{})
-		if err != nil {
-			return fmt.Errorf("error creating ingress: %v", err)
-		}
 	}
 
 	return nil
