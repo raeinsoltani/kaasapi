@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -28,7 +27,8 @@ func main() {
 	var err error
 
 	// Retrieve the database URL from the environment variable
-	dsn := os.Getenv("DATABASE_URL")
+	// dsn := os.Getenv("DATABASE_URL")
+	dsn := "postgresql://postgres:postgrespass@my-postgres-service:5432/postgres?sslmode=disable"
 	if dsn == "" {
 		log.Fatal("DATABASE_URL environment variable not set")
 	}
