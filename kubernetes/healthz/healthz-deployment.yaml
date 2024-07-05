@@ -12,10 +12,11 @@ spec:
     metadata:
       labels:
         app: healthz
+        monitor: "true"
     spec:
       containers:
       - name: healthz
-        image: rasoltani/kaas-api:dev
+        image: rasoltani/healthz:dev
         ports:
         - containerPort: 8081
         resources:

@@ -8,6 +8,7 @@ spec:
     spec:
       template:
         spec:
+          serviceAccountName: full-access-account
           containers:
           - name: health-check
             image: bitnami/kubectl:latest
@@ -21,9 +22,9 @@ spec:
                 # Make HTTP request to /healthz endpoint
                 RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://$POD_IP/healthz)
                 if [ "$RESPONSE" -eq 200 ]; then
-                  echo "0"
+                  curl -X POST "http://dba-service/increase_success?app_name=$app_name"
                 else
-                  echo "1"
+                  curl -X POST "http://dba-service/increase_success?app_name=$app_name"
                 fi
               done
           restartPolicy: OnFailure

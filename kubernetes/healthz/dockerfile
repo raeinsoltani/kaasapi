@@ -1,0 +1,6 @@
+FROM bitnami/kubectl:latest
+USER root
+RUN install_packages curl
+COPY script.sh /script.sh
+RUN chmod +x /script.sh
+USER 1001

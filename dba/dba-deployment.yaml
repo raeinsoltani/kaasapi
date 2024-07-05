@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: dba-app
-        image: rasoltani/dba-app:dev
+        image: rasoltani/dba-app:dev3
         ports:
         - containerPort: 1323
         env:
