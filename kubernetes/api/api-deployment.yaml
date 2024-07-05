@@ -18,6 +18,24 @@ spec:
         image: rasoltani/kaas-api:dev
         ports:
         - containerPort: 8081
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          timeoutSeconds: 2
+        readinessProbe:
+          httpGet:
+            path: /readiness
+            port: 8081
+          initialDelaySeconds: 5
+          timeoutSeconds: 2
+        startupProbe:
+          httpGet:
+            path: /startup
+            port: 8081
+          failureThreshold: 30
+          periodSeconds: 10
         resources:
           limits:
             cpu: "1"

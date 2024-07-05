@@ -11,20 +11,22 @@ spec:
           serviceAccountName: full-access-account
           containers:
           - name: health-check
-            image: bitnami/kubectl:latest
+            image: rasoltani/kubectl-curl:dev
             command:
             - /bin/sh
             - -c
             - |
-              # Get all pods with label monitor="true"
-              PODS=$(kubectl get pods -l monitor="true" -o jsonpath='{.items[*].status.podIP}')
-              for POD_IP in $PODS; do
+              # Get all pods with label monitor="true" and their names
+              PODS_INFO=$(kubectl get pods -l monitor="true" -o jsonpath="{range .items[*]}{.metadata.name}{' '}{.status.podIP}{'\n'}{end}")
+              echo "$PODS_INFO" | while read -r line; do
+                POD_NAME=$(echo $line | cut -d' ' -f1)
+                POD_IP=$(echo $line | cut -d' ' -f2)
                 # Make HTTP request to /healthz endpoint
                 RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://$POD_IP/healthz)
                 if [ "$RESPONSE" -eq 200 ]; then
-                  curl -X POST "http://dba-service/increase_success?app_name=$app_name"
+                  curl -X POST "http://dba-service/increase_success?app_name=$POD_NAME"
                 else
-                  curl -X POST "http://dba-service/increase_success?app_name=$app_name"
+                  curl -X POST "http://dba-service/increase_failure?app_name=$POD_NAME" # Assuming there's an increase_failure endpoint
                 fi
               done
           restartPolicy: OnFailure
