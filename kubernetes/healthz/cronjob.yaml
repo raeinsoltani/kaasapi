@@ -3,7 +3,7 @@ kind: CronJob
 metadata:
   name: health-check-cronjob
 spec:
-  schedule: "*/5 * * * *" # Every 5 minutes
+  schedule: "*/2 * * * *"
   jobTemplate:
     spec:
       template:
