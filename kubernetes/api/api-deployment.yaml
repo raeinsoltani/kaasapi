@@ -15,7 +15,7 @@ spec:
       serviceAccountName: full-access-account
       containers:
       - name: kaas-api
-        image: rasoltani/kaas-api:dev
+        image: rasoltani/kaas-api:dev2
         ports:
         - containerPort: 8081
         livenessProbe:
