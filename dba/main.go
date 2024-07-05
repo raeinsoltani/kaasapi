@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -27,8 +28,7 @@ func main() {
 	var err error
 
 	// Retrieve the database URL from the environment variable
-	// dsn := os.Getenv("DATABASE_URL")
-	dsn := "postgresql://postgres:postgrespass@my-postgres-service:5432/postgres?sslmode=disable"
+	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
 		log.Fatal("DATABASE_URL environment variable not set")
 	}
@@ -60,6 +60,17 @@ func increaseFailure(c echo.Context) error {
 
 	var app App
 	if err := db.First(&app, "app_name = ?", appName).Error; err != nil {
+		// Create a new app in the database
+		app := App{
+			AppName:      appName,
+			FailureCount: 0,
+			SuccessCount: 0,
+			LastFailure:  time.Time{},
+			LastSuccess:  time.Time{},
+		}
+		if err := db.Create(&app).Error; err != nil {
+			return c.JSON(http.StatusInternalServerError, echo.Map{"error": "failed to create app"})
+		}
 		return c.JSON(http.StatusNotFound, echo.Map{"error": "app not found"})
 	}
 
@@ -78,6 +89,16 @@ func increaseSuccess(c echo.Context) error {
 
 	var app App
 	if err := db.First(&app, "app_name = ?", appName).Error; err != nil {
+		app := App{
+			AppName:      appName,
+			FailureCount: 0,
+			SuccessCount: 0,
+			LastFailure:  time.Time{},
+			LastSuccess:  time.Time{},
+		}
+		if err := db.Create(&app).Error; err != nil {
+			return c.JSON(http.StatusInternalServerError, echo.Map{"error": "failed to create app"})
+		}
 		return c.JSON(http.StatusNotFound, echo.Map{"error": "app not found"})
 	}
 

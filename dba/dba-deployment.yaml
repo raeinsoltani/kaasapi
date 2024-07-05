@@ -19,4 +19,4 @@ spec:
         - containerPort: 1323
         env:
         - name: DATABASE_URL
-          value: "postgresql://postgres:postgrespass@my-postgres-service:5432/postgres"
+          value: "postgresql://postgres_user:password@postgres-master/postgres"
