@@ -1,0 +1,16 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dba-ingress
+spec:
+  rules:
+  - host: dba.kubernetes.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: dba-service
+            port:
+              number: 80

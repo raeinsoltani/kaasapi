@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dba-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: dba-app
+  template:
+    metadata:
+      labels:
+        app: dba-app
+    spec:
+      containers:
+      - name: dba-app
+        image: rasotlani/dba-app:dev
+        ports:
+        - containerPort: 1323
+        env:
+        - name: DATABASE_URL
+          value: "host=my-postgres-service port=5432 user=postgres password=postgrespass dbname=statusdb sslmode=disable TimeZone=Asia/Shanghai"
