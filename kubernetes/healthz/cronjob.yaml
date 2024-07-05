@@ -1,0 +1,29 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: health-check-cronjob
+spec:
+  schedule: "*/5 * * * *" # Every 5 minutes
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: health-check
+            image: bitnami/kubectl:latest
+            command:
+            - /bin/sh
+            - -c
+            - |
+              # Get all pods with label monitor="true"
+              PODS=$(kubectl get pods -l monitor="true" -o jsonpath='{.items[*].status.podIP}')
+              for POD_IP in $PODS; do
+                # Make HTTP request to /healthz endpoint
+                RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://$POD_IP/healthz)
+                if [ "$RESPONSE" -eq 200 ]; then
+                  echo "0"
+                else
+                  echo "1"
+                fi
+              done
+          restartPolicy: OnFailure

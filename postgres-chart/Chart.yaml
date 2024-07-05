@@ -1,0 +1,4 @@
+apiVersion: v2
+name: postgres-helm-chart
+description: A Helm chart for PostgreSQL with master-slave replication
+version: 1.0.0

@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-replica
+spec:
+  serviceName: "postgres-replica"
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: postgres
+      role: replica
+  template:
+    metadata:
+      labels:
+        app: postgres
+        role: replica
+    spec:
+      containers:
+      - name: postgres
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: postgres-user
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: postgres-password
+        - name: REPLICA_USER
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: replica-user
+        - name: REPLICA_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: replica-password
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        - name: config-volume
+          mountPath: /etc/postgresql/postgresql.conf
+          subPath: replica.conf
+      volumes:
+      - name: config-volume
+        configMap:
+          name: postgres-config
+      - name: postgres-storage
+        persistentVolumeClaim:
+          claimName: postgres-pvc

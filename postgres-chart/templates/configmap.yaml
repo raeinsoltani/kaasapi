@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-config
+data:
+  master.conf: |
+    listen_addresses = {{ .Values.config.master.listen_addresses }}
+    wal_level = {{ .Values.config.master.wal_level }}
+    max_wal_senders = {{ .Values.config.master.max_wal_senders }}
+    wal_keep_segments = {{ .Values.config.master.wal_keep_segments }}
+    hot_standby = {{ .Values.config.master.hot_standby }}
+
+  replica.conf: |
+    hot_standby = {{ .Values.config.replica.hot_standby }}
+    primary_conninfo = {{ .Values.config.replica.primary_conninfo }}

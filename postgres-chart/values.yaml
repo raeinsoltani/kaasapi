@@ -1,0 +1,28 @@
+replicaCount: 2
+
+image:
+  repository: postgres
+  tag: "13"
+
+postgres:
+  master:
+    user: "postgres_user"
+    password: "password"
+  replica:
+    user: "replica"
+    password: "replica_pass"
+
+persistentVolume:
+  size: 1Gi
+  storageClass: ""
+
+config:
+  master:
+    listen_addresses: "'*'"
+    wal_level: replica
+    max_wal_senders: 10
+    wal_keep_segments: 64
+    hot_standby: on
+  replica:
+    hot_standby: on
+    primary_conninfo: "'host=postgres-master port=5432 user=replica password=replica_pass'"

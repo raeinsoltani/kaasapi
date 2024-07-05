@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: healthz-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: healthz
+      monitor: "true"
+  template:
+    metadata:
+      labels:
+        app: healthz
+    spec:
+      containers:
+      - name: healthz
+        image: rasoltani/kaas-api:dev
+        ports:
+        - containerPort: 8081
+        resources:
+          limits:
+            cpu: "1"
+            memory: "512Mi"
+          requests:
+            cpu: "0.5"
+            memory: "256Mi"
